@@ -1,0 +1,41 @@
+name: Build APK from ZIP
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip project
+        run: |
+          mkdir -p project
+          unzip -o Unity_Ads_Tester.zip -d project
+          DIR=$(dirname "$(find project -maxdepth 3 -name settings.gradle.kts | head -n1)")
+          echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
+          echo "Project folder: $DIR"
+          ls -la "$DIR"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+          build-root-directory: ${{ env.PROJECT_DIR }}
+
+      - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle assembleDebug --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Unity_Ads_Tester-debug-apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
